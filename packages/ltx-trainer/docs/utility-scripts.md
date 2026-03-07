@@ -181,7 +181,7 @@ uv run python scripts/decode_latents.py /path/to/latents/dir \
 
 ### Inference Script
 
-The `scripts/inference.py` script runs inference with a trained model.
+The `scripts/inference.py` script runs inference with a trained model. If `--device` is not provided, it defaults to `cuda` when available, otherwise `cpu`.
 
 > [!TIP]
 > For production inference, consider using the [`ltx-pipelines`](../../ltx-pipelines/) package which provides optimized,
@@ -235,6 +235,15 @@ uv run python scripts/inference.py \
     --prompt "A cat playing with a ball" \
     --stg-scale 0.0 \
     --output output.mp4
+
+# CPU inference example (smoke test / low-resource environments)
+uv run python scripts/inference.py \
+    --checkpoint /path/to/model.safetensors \
+    --text-encoder-path /path/to/gemma \
+    --prompt "A calm lake with mountains in the background" \
+    --skip-audio \
+    --device cpu \
+    --output output_cpu.mp4
 ```
 
 **Guidance parameters:**

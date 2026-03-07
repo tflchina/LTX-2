@@ -10,10 +10,12 @@ Before you begin, ensure you have:
    Download `ltx-2-19b-dev.safetensors` from: [HuggingFace Hub](https://huggingface.co/Lightricks/LTX-2)
 2. **Gemma Text Encoder** - A local directory containing the Gemma model (required for LTX-2).
    Download from: [HuggingFace Hub](https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized/)
-3. **Linux with CUDA** - The trainer requires `triton` which is Linux-only
-4. **GPU with sufficient VRAM** - 80GB recommended for the standard config. For GPUs with 32GB VRAM (e.g., RTX 5090),
+3. **Linux** - Required (the trainer stack depends on Linux-only components such as `triton`)
+4. **GPU with sufficient VRAM (recommended)** - 80GB recommended for the standard config. For GPUs with 32GB VRAM (e.g., RTX 5090),
    use the [low VRAM config](../configs/ltx2_av_lora_low_vram.yaml) which enables INT8 quantization and other
-   memory optimizations
+   memory optimizations.
+5. **CPU-only mode (supported for smoke tests)** - You can run the trainer on CPU for setup/data validation, but it is
+   significantly slower than GPU training.
 
 ## ⚡ Installation
 
@@ -66,6 +68,7 @@ Create or modify a configuration YAML file. Start with one of the example config
 - [`configs/ltx2_av_lora.yaml`](../configs/ltx2_av_lora.yaml) - Audio-video LoRA training
 - [`configs/ltx2_av_lora_low_vram.yaml`](../configs/ltx2_av_lora_low_vram.yaml) - Audio-video LoRA training (optimized for 32GB VRAM)
 - [`configs/ltx2_v2v_ic_lora.yaml`](../configs/ltx2_v2v_ic_lora.yaml) - IC-LoRA video-to-video
+- [`configs/ltx2_av_lora_cpu.yaml`](../configs/ltx2_av_lora_cpu.yaml) - CPU-only smoke-test run
 
 Key settings to update:
 
@@ -94,7 +97,27 @@ For multi-GPU training:
 uv run accelerate launch scripts/train.py configs/ltx2_av_lora.yaml
 ```
 
+For a CPU-only smoke test run:
+
+```bash
+uv run python scripts/train.py configs/ltx2_av_lora_cpu.yaml
+```
+
 See [Training Guide](training-guide.md) for distributed training and advanced options.
+
+### 4. Run Inference with Your Checkpoint
+
+After (or during) training, you can generate a sample video:
+
+```bash
+uv run python scripts/inference.py \
+    --checkpoint /path/to/ltx-2-model.safetensors \
+    --text-encoder-path /path/to/gemma-model \
+    --prompt "A cinematic drone shot of ocean waves at sunset" \
+    --skip-audio \
+    --device cpu \
+    --output outputs/inference_cpu_example.mp4
+```
 
 ## 🎯 Training Modes
 
