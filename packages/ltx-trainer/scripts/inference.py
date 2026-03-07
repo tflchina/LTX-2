@@ -274,11 +274,15 @@ def main() -> None:  # noqa: PLR0912, PLR0915
     parser.add_argument(
         "--device",
         type=str,
-        default="cuda",
-        help="Device to run on (cuda/cpu)",
+        default=None,
+        help="Device to run on (e.g., cuda, cuda:0, cpu). Defaults to cuda when available, else cpu.",
     )
 
     args = parser.parse_args()
+
+    # Resolve device (auto-select if not provided)
+    if args.device is None:
+        args.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Validate conditioning arguments
     if args.include_reference_in_output and args.reference_video is None:
@@ -351,6 +355,7 @@ def main() -> None:  # noqa: PLR0912, PLR0915
     else:
         print("STG: disabled")
     print(f"Seed: {args.seed}")
+    print(f"Device: {args.device}")
     if args.lora_path:
         print(f"LoRA: {args.lora_path}")
     if condition_image is not None:

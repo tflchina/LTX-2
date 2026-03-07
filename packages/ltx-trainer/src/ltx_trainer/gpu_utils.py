@@ -71,6 +71,9 @@ def get_gpu_memory_gb(device: torch.device) -> float:
     Returns:
         Current GPU memory usage in GB
     """
+    if device.type != "cuda" or not torch.cuda.is_available():
+        return 0.0
+
     try:
         device_id = device.index if device.index is not None else 0
         result = subprocess.check_output(

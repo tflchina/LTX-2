@@ -5,3 +5,4 @@ configs/*.yaml
 datasets
 outputs
 wandb
+!configs/ltx2_av_lora_cpu.yaml

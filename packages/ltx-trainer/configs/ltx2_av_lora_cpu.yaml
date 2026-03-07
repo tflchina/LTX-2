@@ -1,0 +1,88 @@
+# =============================================================================
+# LTX-2 CPU Training Smoke-Test Configuration
+# =============================================================================
+#
+# This configuration is intended for CPU-only environments and quick smoke tests.
+# It is useful for validating your setup and data pipeline before running a full
+# GPU training job.
+#
+# NOTE: Training LTX-2 on CPU is extremely slow and not recommended for real runs.
+# =============================================================================
+
+model:
+  model_path: "path/to/ltx-2-model.safetensors"
+  text_encoder_path: "path/to/gemma-text-encoder"
+  training_mode: "lora"
+  load_checkpoint: null
+
+lora:
+  rank: 8
+  alpha: 8
+  dropout: 0.0
+  target_modules:
+    - "to_k"
+    - "to_q"
+    - "to_v"
+    - "to_out.0"
+
+training_strategy:
+  name: "text_to_video"
+  first_frame_conditioning_p: 0.5
+  with_audio: false
+
+optimization:
+  learning_rate: 1e-4
+  steps: 10
+  batch_size: 1
+  gradient_accumulation_steps: 1
+  max_grad_norm: 1.0
+  optimizer_type: "adamw"
+  scheduler_type: "constant"
+  scheduler_params: {}
+  enable_gradient_checkpointing: false
+
+acceleration:
+  mixed_precision_mode: "no"
+  quantization: null
+  load_text_encoder_in_8bit: false
+
+data:
+  preprocessed_data_root: "/path/to/preprocessed/data"
+  num_dataloader_workers: 0
+
+validation:
+  prompts: []
+  negative_prompt: "worst quality, inconsistent motion, blurry, jittery, distorted"
+  images: null
+  video_dims: [576, 576, 9]
+  frame_rate: 25.0
+  seed: 42
+  inference_steps: 10
+  interval: null
+  videos_per_prompt: 1
+  guidance_scale: 4.0
+  stg_scale: 1.0
+  stg_layers: [14, 19, 24]
+  image_cond_noise_scale: 0.15
+  generation_model_mode: "base"
+  decode_timestep: [0.0, 0.0]
+  decode_noise_scale: [0.025, 0.025]
+  skip_initial_validation: true
+
+output_dir: "outputs/ltx2_cpu_smoke_test"
+
+seed: 42
+
+checkpoint:
+  interval: 5
+  keep_last_n: 2
+
+wandb:
+  project: null
+  entity: null
+  log_interval: 1
+  mode: "disabled"
+  log_validation_videos: false
+
+hub:
+  push_to_hub: false

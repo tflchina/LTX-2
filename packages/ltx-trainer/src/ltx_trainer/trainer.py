@@ -355,20 +355,22 @@ class LtxvTrainer:
         #   3. If validation prompts are configured, computes and caches their embeddings
         #   4. Unloads the Gemma model entirely, keeps the embeddings processor for training
 
-        # Load text encoder (pure Gemma LLM) on GPU
-        logger.debug("Loading text encoder...")
+        text_encoder_device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        # Load text encoder (pure Gemma LLM)
+        logger.debug(f"Loading text encoder on {text_encoder_device}...")
         text_encoder = load_text_encoder(
             gemma_model_path=self._config.model.text_encoder_path,
-            device="cuda",
+            device=text_encoder_device,
             dtype=torch.bfloat16,
             load_in_8bit=self._config.acceleration.load_text_encoder_in_8bit,
         )
 
         # Load embeddings processor (feature extractor + connectors)
-        logger.debug("Loading embeddings processor...")
+        logger.debug(f"Loading embeddings processor on {text_encoder_device}...")
         self._embeddings_processor = load_embeddings_processor(
             checkpoint_path=self._config.model.model_path,
-            device="cuda",
+            device=text_encoder_device,
             dtype=torch.bfloat16,
         )
 
@@ -565,9 +567,10 @@ class LtxvTrainer:
         # noinspection PyTypeChecker
         self._transformer = self._accelerator.prepare(self._transformer)
 
-        # Log GPU memory usage after model preparation
-        vram_usage_gb = torch.cuda.memory_allocated() / 1024**3
-        logger.debug(f"GPU memory usage after models preparation: {vram_usage_gb:.2f} GB")
+        # Log memory usage after model preparation
+        if self._accelerator.device.type == "cuda":
+            vram_usage_gb = torch.cuda.memory_allocated() / 1024**3
+            logger.debug(f"GPU memory usage after models preparation: {vram_usage_gb:.2f} GB")
 
     @staticmethod
     def _find_checkpoint(checkpoint_path: str | Path) -> Path | None:
