@@ -10,6 +10,7 @@ This script is intentionally self-contained at the repository level:
 from __future__ import annotations
 
 import argparse
+import inspect
 import logging
 import sys
 from pathlib import Path
@@ -100,6 +101,47 @@ class LTX2Model:
             device=self.device,
             quantization=quantization,
         )
+
+    @torch.inference_mode()
+    def list_root_modules(self) -> list[tuple[str, torch.nn.Module]]:
+        """Return the root ``torch.nn.Module`` instances used by this model.
+
+        Modules are discovered dynamically from zero-argument ``ModelLedger``
+        methods and returned as ``(name, module)`` tuples.
+        """
+        if self.simulate or self.pipeline is None:
+            return []
+
+        model_ledger = self.pipeline.model_ledger
+        modules: list[tuple[str, torch.nn.Module]] = []
+
+        for name in sorted(dir(model_ledger)):
+            if name.startswith("_"):
+                continue
+
+            candidate = getattr(model_ledger, name)
+            if not callable(candidate):
+                continue
+
+            signature = inspect.signature(candidate)
+            requires_arguments = any(
+                parameter.default is inspect.Signature.empty
+                and parameter.kind
+                in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+                for parameter in signature.parameters.values()
+            )
+            if requires_arguments:
+                continue
+
+            try:
+                value = candidate()
+            except (TypeError, ValueError):
+                continue
+
+            if isinstance(value, torch.nn.Module):
+                modules.append((name, value))
+
+        return modules
 
     @torch.inference_mode()
     def infer(
