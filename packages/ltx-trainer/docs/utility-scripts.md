@@ -274,6 +274,23 @@ uv run accelerate launch --num_processes 4 scripts/train.py configs/ltx2_av_lora
 
 For detailed usage, see the [Training Guide](training-guide.md).
 
+### H100 Setup + Run Helper (Inference)
+
+Use `scripts/setup_and_run_h100.sh` when you want a single command that validates GPU type, installs dependencies,
+applies H100-oriented CUDA/Torch defaults, and launches `scripts/inference.py`.
+
+```bash
+scripts/setup_and_run_h100.sh \
+  /path/to/model.safetensors \
+  /path/to/gemma \
+  "A cinematic drone shot over snowy mountains" \
+  outputs/h100_inference.mp4
+
+# Optional: pass extra inference flags
+scripts/setup_and_run_h100.sh /path/to/model.safetensors /path/to/gemma "A red sports car" \
+  outputs/car.mp4 --num-inference-steps 40 --guidance-scale 5.0 --skip-audio
+```
+
 ## 💡 Tips for Using Utility Scripts
 
 - **Start with `--help`**: Always check available options for each script
