@@ -109,11 +109,11 @@ class LTX2Model:
         *,
         negative_prompt: str = "",
         seed: int = 42,
-        height: int = 512,
-        width: int = 704,
-        num_frames: int = 97,
+        height: int = 1080,
+        width: int = 1920,
+        num_frames: int = 121,
         frame_rate: float = 24.0,
-        num_inference_steps: int = 40,
+        num_inference_steps: int = 1,
         video_cfg_scale: float = 3.0,
         audio_cfg_scale: float = 3.0,
         enhance_prompt: bool = False,
@@ -160,11 +160,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--negative-prompt", default="", help="Negative prompt text")
     parser.add_argument("--output", default="output.mp4", help="Output path (mp4 for real inference, .pt for --simulate)")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--height", type=int, default=512)
-    parser.add_argument("--width", type=int, default=704)
-    parser.add_argument("--num-frames", type=int, default=97)
+    parser.add_argument("--height", type=int, default=1080)
+    parser.add_argument("--width", type=int, default=1920)
+    parser.add_argument("--num-frames", type=int, default=121)
     parser.add_argument("--frame-rate", type=float, default=24.0)
-    parser.add_argument("--num-inference-steps", type=int, default=40)
+    parser.add_argument("--num-inference-steps", type=int, default=1)
     parser.add_argument("--video-cfg-scale", type=float, default=3.0)
     parser.add_argument("--audio-cfg-scale", type=float, default=3.0)
     parser.add_argument("--enhance-prompt", action="store_true")
