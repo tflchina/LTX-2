@@ -70,6 +70,19 @@ Download the following models from the [LTX-2.3 HuggingFace repository](https://
 * **[A2VidPipelineTwoStage](packages/ltx-pipelines/src/ltx_pipelines/a2vid_two_stage.py)** - Audio-to-video generation conditioned on an input audio file
 * **[RetakePipeline](packages/ltx-pipelines/src/ltx_pipelines/retake.py)** - Regenerate a specific time region of an existing video
 
+### Single-file fast inference (`model.py`)
+
+If you want one-file inference focused on speed (not exact functional parity), use the repository-level [`model.py`](model.py) wrapper. It uses the distilled two-stage flow and enables FP8 cast quantization by default:
+
+```bash
+python model.py \
+  --distilled-checkpoint /models/ltx-2.3-22b-distilled.safetensors \
+  --spatial-upscaler /models/ltx-2.3-spatial-upscaler-x2-1.0.safetensors \
+  --gemma-root /models/gemma-3-12b-it-qat-q4_0-unquantized \
+  --prompt "A cinematic drone shot over snowy mountains at sunrise" \
+  --output out.mp4
+```
+
 ### ⚡ Optimization Tips
 
 * **Use DistilledPipeline** - Fastest inference with only 8 predefined sigmas (8 steps stage 1, 4 steps stage 2)
