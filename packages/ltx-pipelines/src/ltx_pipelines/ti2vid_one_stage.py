@@ -112,7 +112,8 @@ class TI2VidOneStagePipeline:
             dtype=dtype,
             device=self.device,
         )
-        torch.cuda.synchronize()
+        if self.device.type == "cuda":
+            torch.cuda.synchronize()
         del video_encoder
         cleanup_memory()
 
@@ -157,7 +158,8 @@ class TI2VidOneStagePipeline:
             device=self.device,
         )
 
-        torch.cuda.synchronize()
+        if self.device.type == "cuda":
+            torch.cuda.synchronize()
         del transformer
         cleanup_memory()
 
