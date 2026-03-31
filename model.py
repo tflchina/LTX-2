@@ -62,6 +62,28 @@ def _build_simulated_sample(
     return video, audio
 
 
+class _SimulatedPipeline:
+    """Callable fallback pipeline that generates deterministic synthetic samples."""
+
+    def __call__(
+        self,
+        *,
+        seed: int,
+        height: int,
+        width: int,
+        num_frames: int,
+        frame_rate: float,
+        **_: Any,
+    ) -> tuple[torch.Tensor, "Audio"]:
+        return _build_simulated_sample(
+            num_frames=num_frames,
+            height=height,
+            width=width,
+            frame_rate=frame_rate,
+            seed=seed,
+        )
+
+
 class LTX2Model:
     """Unified wrapper for the original LTX-2 one-stage pipeline."""
 
@@ -75,14 +97,17 @@ class LTX2Model:
         device: torch.device | None = None,
     ) -> None:
         self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.simulate = simulate
+        has_checkpoint = bool(checkpoint and checkpoint.strip())
+        has_gemma_root = bool(gemma_root and gemma_root.strip())
+        self.synthetic_mode = simulate or not has_checkpoint or not has_gemma_root
 
-        if self.simulate:
-            self.pipeline = None
+        if self.synthetic_mode:
+            if not simulate:
+                logging.warning(
+                    "Checkpoint/Gemma weights not provided. Falling back to synthetic pipeline mode."
+                )
+            self.pipeline = _SimulatedPipeline()
             return
-
-        if checkpoint is None or gemma_root is None:
-            raise ValueError("checkpoint and gemma_root are required unless --simulate is enabled")
 
         quantization = None
         if use_fp8_cast and self.device.type == "cuda":
@@ -109,7 +134,7 @@ class LTX2Model:
         Modules are discovered dynamically from zero-argument ``ModelLedger``
         methods and returned as ``(name, module)`` tuples.
         """
-        if self.simulate or self.pipeline is None:
+        if self.synthetic_mode:
             return []
 
         model_ledger = self.pipeline.model_ledger
@@ -160,16 +185,23 @@ class LTX2Model:
         audio_cfg_scale: float = 3.0,
         enhance_prompt: bool = False,
     ) -> tuple[Any, "Audio"]:
-        if self.simulate:
-            video, audio = _build_simulated_sample(
-                num_frames=num_frames,
+        if self.synthetic_mode:
+            video, audio = self.pipeline(  # type: ignore[misc]
+                seed=seed,
                 height=height,
                 width=width,
+                num_frames=num_frames,
                 frame_rate=frame_rate,
-                seed=seed,
             )
-            torch.save({"video": video, "audio": audio.waveform, "sampling_rate": audio.sampling_rate}, output_path)
-            logging.info("Saved simulated sample tensor bundle to %s", output_path)
+
+            if output_path.endswith(".pt"):
+                torch.save({"video": video, "audio": audio.waveform, "sampling_rate": audio.sampling_rate}, output_path)
+                logging.info("Saved simulated sample tensor bundle to %s", output_path)
+                return video, audio
+
+            from ltx_pipelines.utils.media_io import encode_video
+
+            encode_video(video=video, fps=frame_rate, audio=audio, output_path=output_path, video_chunks_number=1)
             return video, audio
 
         from ltx_core.components.guiders import MultiModalGuiderParams
@@ -200,7 +232,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--gemma-root", help="Path to Gemma-3 model directory")
     parser.add_argument("--prompt", required=True, help="Prompt text")
     parser.add_argument("--negative-prompt", default="", help="Negative prompt text")
-    parser.add_argument("--output", default="output.mp4", help="Output path (mp4 for real inference, .pt for --simulate)")
+    parser.add_argument("--output", default="output.mp4", help="Output path (mp4 for normal/synthetic inference, .pt to dump tensors)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--height", type=int, default=1080)
     parser.add_argument("--width", type=int, default=1920)
@@ -218,9 +250,6 @@ def _parser() -> argparse.ArgumentParser:
 def main() -> None:
     logging.getLogger().setLevel(logging.INFO)
     args = _parser().parse_args()
-
-    if not args.simulate and (not args.checkpoint or not args.gemma_root):
-        raise SystemExit("--checkpoint and --gemma-root are required unless --simulate is enabled")
 
     model = LTX2Model(
         checkpoint=args.checkpoint,
